@@ -26,12 +26,25 @@ function Chat() {
   useEffect(()=>{
     setChats(chatArr)
   },[])
-  const sendMessage = () => {
-    socket.emit("messageSent",{message,user:selectedUser,from:logUser});
+  const sendMessage = async() => {
+    socket.emit("messageSent",{from:logUser,to:selectedUser,message});
     setChats(prev=>[...prev,{message,pos:"right"}])
+    const res = await getRequest(`http://localhost:8000/api/chats/sendMessage/${logUser}/${selectedUser}/${message}`,token);
+    console.log(res.data);
   }
-  const selectUser = (username) => {
-    setChats([])
+  const selectUser = async(username) => {
+    const messages = await getRequest(`http://localhost:8000/api/chats/createChat/${logUser}/${username}`,token)
+    const res = messages.data.success;
+    var messageArr = [];
+    res.forEach((m)=>{
+      if(m.from===logUser) {
+        messageArr.push({message:m.message,pos:"right"})
+      } else {
+        messageArr.push({message:m.message,pos:"left"})
+      }
+    })
+    console.log(messageArr)
+    setChats(messageArr)
     setSelectedUser(username)
   }
   useEffect(()=>{
@@ -47,7 +60,7 @@ function Chat() {
   useEffect(()=>{
     socket.on("receive",message => {
       console.log(logUser, message.from)  
-      if(logUser === message.user && selectedUser === message.from) {
+      if(logUser === message.to && selectedUser === message.from) {
         setChats(prev=>[...prev,{message:message.message,pos:"left"}]);
       }
     })
